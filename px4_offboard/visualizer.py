@@ -37,7 +37,7 @@ __contact__ = "jalim@ethz.ch"
 
 from re import M
 import numpy as np
-
+import os
 import rclpy
 from rclpy.node import Node
 from rclpy.clock import Clock
@@ -90,11 +90,13 @@ class PX4Visualizer(Node):
             '/fmu/in/trajectory_setpoint',
             self.trajectory_setpoint_callback,
             qos_profile)
+        PX4_NS = os.getenv("PX4_MICRODDS_NS")
+        fmu = f"{PX4_NS}/fmu"
 
-        self.vehicle_pose_pub = self.create_publisher(PoseStamped, '/px4_visualizer/vehicle_pose', 10)
-        self.vehicle_vel_pub = self.create_publisher(Marker, '/px4_visualizer/vehicle_velocity', 10)
-        self.vehicle_path_pub = self.create_publisher(Path, '/px4_visualizer/vehicle_path', 10)
-        self.setpoint_path_pub = self.create_publisher(Path, '/px4_visualizer/setpoint_path', 10)
+        self.vehicle_pose_pub = self.create_publisher(PoseStamped, f"{fmu}/px4_visualizer/vehicle_pose", 10)
+        self.vehicle_vel_pub = self.create_publisher(Marker, f"{fmu}/px4_visualizer/vehicle_velocity", 10)
+        self.vehicle_path_pub = self.create_publisher(Path, f"{fmu}/px4_visualizer/vehicle_path", 10)
+        self.setpoint_path_pub = self.create_publisher(Path, f"{fmu}/px4_visualizer/setpoint_path", 10)
 
         self.vehicle_attitude = np.array([1.0, 0.0, 0.0, 0.0])
         self.vehicle_local_position = np.array([0.0, 0.0, 0.0])

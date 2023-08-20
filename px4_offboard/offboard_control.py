@@ -37,6 +37,8 @@ __contact__ = "jalim@ethz.ch"
 
 import rclpy
 import numpy as np
+import os
+import navpy
 from rclpy.node import Node
 from rclpy.clock import Clock
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
@@ -44,40 +46,114 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDur
 from px4_msgs.msg import OffboardControlMode
 from px4_msgs.msg import TrajectorySetpoint
 from px4_msgs.msg import VehicleStatus
+from px4_msgs.msg import VehicleCommand
+from px4_msgs.msg import VehicleLocalPosition
 
 
 class OffboardControl(Node):
 
     def __init__(self):
         super().__init__('minimal_publisher')
-        qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
-            durability=QoSDurabilityPolicy.RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL,
-            history=QoSHistoryPolicy.RMW_QOS_POLICY_HISTORY_KEEP_LAST,
+        
+        # Multicontainer initialization
+        PX4_NS = os.getenv("PX4_MICRODDS_NS")
+        fmu = f"{PX4_NS}/fmu"
+
+        qos_profile_pub = QoSProfile(
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
+            history=QoSHistoryPolicy.KEEP_LAST,
             depth=1
+        )
+
+        qos_profile_sub = QoSProfile(
+            reliability = QoSReliabilityPolicy.BEST_EFFORT,
+            durability = QoSDurabilityPolicy.VOLATILE,
+            history = QoSHistoryPolicy.KEEP_LAST,
+            depth = 1
         )
 
         self.status_sub = self.create_subscription(
             VehicleStatus,
-            '/fmu/out/vehicle_status',
+            f"{fmu}/out/vehicle_status",
             self.vehicle_status_callback,
-            qos_profile)
-        self.publisher_offboard_mode = self.create_publisher(OffboardControlMode, '/fmu/in/offboard_control_mode', qos_profile)
-        self.publisher_trajectory = self.create_publisher(TrajectorySetpoint, '/fmu/in/trajectory_setpoint', qos_profile)
-        timer_period = 0.02  # seconds
+            qos_profile_pub)
+        
+        self.publisher_offboard_mode = self.create_publisher(
+            OffboardControlMode,
+            f"{fmu}/in/offboard_control_mode",
+            qos_profile_pub)
+        
+        self.publisher_trajectory = self.create_publisher(
+            TrajectorySetpoint,
+            f"{fmu}/in/trajectory_setpoint",
+            qos_profile_pub)
+        
+        self.vehicle_command_publisher_ = self.create_publisher(
+            VehicleCommand,
+            f"{fmu}/in/vehicle_command",
+            qos_profile_pub)
+        
+        self.local_pos_sub = self.create_subscription(
+            VehicleLocalPosition,
+            f"{fmu}/out/vehicle_local_position",
+            self.local_position_callback,
+            qos_profile_sub)
+        
+        timer_period = 0.01  # seconds
         self.timer = self.create_timer(timer_period, self.cmdloop_callback)
-
         self.nav_state = VehicleStatus.NAVIGATION_STATE_MAX
-        self.dt = timer_period
-        self.theta = 0.0
-        self.radius = 10.0
-        self.omega = 0.5
- 
+        self.counter = 0
+        # Setting the reference lla as the origin of the AbuDhabi Map 
+        
+        # Map Origin
+        #self.lla_ref = np.array([24.483136, 54.367537, 0]) # latlonele -> (deg,deg,m)
+        
+        # Interesting trajectory origin
+        self.lla_ref = np.array([24.484043629238872, 54.36068616768677, 0]) # latlonele -> (deg,deg,m)
+        self.waypoint_idx = 0
+        self.waypoints_lla = np.array([
+           [24.484501929162963, 54.36107106467421, 5],
+           [24.48476311664666, 54.3614948536716, 5],
+           [24.485097533474377, 54.36197496905472, 10],
+           [24.485400216562002, 54.3625570084458, 15], 
+           [24.48585179883862, 54.36321951405934, 15], 
+           [24.486198417650844, 54.363726451568475, 15], 
+           [24.486564563238797, 54.36423338904003, 20], 
+           [24.486894093361375, 54.364729597702144, 20], 
+           [24.486664642851466, 54.36508096711639, 20],
+           [24.486396136401133, 54.365263357350244, 15],
+           [24.486066604972933, 54.36541087887424, 10],
+           [24.485610141502686, 54.36572201510017,0],
+        ])
+        self.local_pos_ned = np.array([0,0,0])
+        # Initializing the next_pos_ned with the first waypoint 
+        self.next_pos_ned = navpy.lla2ned(self.waypoints_lla[0,0], self.waypoints_lla[0,1],
+                    self.waypoints_lla[0,2],self.lla_ref[0], self.lla_ref[1], self.lla_ref[2],
+                    latlon_unit='deg', alt_unit='m', model='wgs84')          
+   
+    def publish_vehicle_command(self, command, param1=0.0, param2=0.0):
+        msg = VehicleCommand()
+        msg.param1 = param1
+        msg.param2 = param2
+        msg.command = command  # command ID
+        msg.target_system = 0  # system which should execute the command
+        msg.target_component = 1  # component which should execute the command, 0 for all components
+        msg.source_system = 1  # system sending the command
+        msg.source_component = 1  # component sending the command
+        msg.from_external = True
+        msg.timestamp = int(Clock().now().nanoseconds / 1000) # time in microseconds
+        self.vehicle_command_publisher_.publish(msg)
+
     def vehicle_status_callback(self, msg):
         # TODO: handle NED->ENU transformation
-        print("NAV_STATUS: ", msg.nav_state)
-        print("  - offboard status: ", VehicleStatus.NAVIGATION_STATE_OFFBOARD)
+        # print("NAV_STATUS: ", msg.nav_state)
+        # print("  - offboard status: ", VehicleStatus.NAVIGATION_STATE_OFFBOARD)
         self.nav_state = msg.nav_state
+    
+    def local_position_callback(self,msg):
+        self.local_pos_ned      =   np.array([msg.x,msg.y,msg.z],dtype=np.float64)
+        #self.local_vel_ned      =   np.array([msg.vx,msg.vy,msg.vz],dtype=np.float64)
 
     def cmdloop_callback(self):
         # Publish offboard control modes
@@ -87,15 +163,25 @@ class OffboardControl(Node):
         offboard_msg.velocity=False
         offboard_msg.acceleration=False
         self.publisher_offboard_mode.publish(offboard_msg)
-        if self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
+        self.counter += 1   # disable for an experiment
 
+        if self.counter <= 10:
+            self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE,1.0,6.0)
+            self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM,1.0)
+
+        if self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
+            # If current waypoint is reached, move to next waypoint
+            if (np.linalg.norm(self.local_pos_ned - self.next_pos_ned) < 1):
+                self.waypoint_idx += 1
+            self.next_pos_ned = navpy.lla2ned(self.waypoints_lla[self.waypoint_idx,0], self.waypoints_lla[self.waypoint_idx,1],
+                    self.waypoints_lla[self.waypoint_idx,2],self.lla_ref[0], self.lla_ref[1], self.lla_ref[2],
+                    latlon_unit='deg', alt_unit='m', model='wgs84')
             trajectory_msg = TrajectorySetpoint()
-            trajectory_msg.position[0] = self.radius * np.cos(self.theta)
-            trajectory_msg.position[1] = self.radius * np.sin(self.theta)
-            trajectory_msg.position[2] = -5.0
+            trajectory_msg.position[0] = self.next_pos_ned[0]
+            trajectory_msg.position[1] = self.next_pos_ned[1]
+            trajectory_msg.position[2] = self.next_pos_ned[2]
             self.publisher_trajectory.publish(trajectory_msg)
 
-            self.theta = self.theta + self.omega * self.dt
 
 
 def main(args=None):
