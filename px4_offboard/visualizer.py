@@ -74,24 +74,25 @@ class PX4Visualizer(Node):
             history=QoSHistoryPolicy.RMW_QOS_POLICY_HISTORY_KEEP_LAST,
             depth=1
         )
-
+        #PX4_NS = os.getenv("PX4_MICRODDS_NS")
+        PX4_NS = "px4_1"
+        fmu = f"{PX4_NS}/fmu"
         self.attitude_sub = self.create_subscription(
             VehicleAttitude,
-            '/fmu/out/vehicle_attitude',
+            f"{fmu}/out/vehicle_attitude",
             self.vehicle_attitude_callback,
             qos_profile)
         self.local_position_sub = self.create_subscription(
             VehicleLocalPosition,
-            '/fmu/out/vehicle_local_position',
+            f"{fmu}/out/vehicle_local_position",
             self.vehicle_local_position_callback,
             qos_profile)
         self.setpoint_sub = self.create_subscription(
             TrajectorySetpoint,
-            '/fmu/in/trajectory_setpoint',
+            f"{fmu}/fmu/in/trajectory_setpoint",
             self.trajectory_setpoint_callback,
             qos_profile)
-        PX4_NS = os.getenv("PX4_MICRODDS_NS")
-        fmu = f"{PX4_NS}/fmu"
+       
 
         self.vehicle_pose_pub = self.create_publisher(PoseStamped, f"{fmu}/px4_visualizer/vehicle_pose", 10)
         self.vehicle_vel_pub = self.create_publisher(Marker, f"{fmu}/px4_visualizer/vehicle_velocity", 10)

@@ -56,9 +56,10 @@ class OffboardControl(Node):
         super().__init__('minimal_publisher')
         
         # Multicontainer initialization
-        PX4_NS = os.getenv("PX4_MICRODDS_NS")
+        #PX4_NS = os.getenv("PX4_MICRODDS_NS")
+        PX4_NS = "px4_1"
         fmu = f"{PX4_NS}/fmu"
-
+        print(fmu)
         qos_profile_pub = QoSProfile(
             reliability=QoSReliabilityPolicy.BEST_EFFORT,
             durability=QoSDurabilityPolicy.TRANSIENT_LOCAL,
@@ -113,16 +114,16 @@ class OffboardControl(Node):
         self.lla_ref = np.array([24.484043629238872, 54.36068616768677, 0]) # latlonele -> (deg,deg,m)
         self.waypoint_idx = 0
         self.waypoints_lla = np.array([
-           [24.484501929162963, 54.36107106467421, 5],
-           [24.48476311664666, 54.3614948536716, 5],
-           [24.485097533474377, 54.36197496905472, 10],
-           [24.485400216562002, 54.3625570084458, 15], 
-           [24.48585179883862, 54.36321951405934, 15], 
-           [24.486198417650844, 54.363726451568475, 15], 
+            [24.484326113268185, 54.360644616972564, 10],
+           [24.48476311664666, 54.3614948536716, 20],
+           [24.485097533474377, 54.36197496905472, 20],
+           [24.485400216562002, 54.3625570084458, 25], 
+           [24.48585179883862, 54.36321951405934, 25], 
+           [24.486198417650844, 54.363726451568475, 25], 
            [24.486564563238797, 54.36423338904003, 20], 
            [24.486894093361375, 54.364729597702144, 20], 
            [24.486664642851466, 54.36508096711639, 20],
-           [24.486396136401133, 54.365263357350244, 15],
+           [24.486396136401133, 54.365263357350244, 25],
            [24.486066604972933, 54.36541087887424, 10],
            [24.485610141502686, 54.36572201510017,0],
         ])
@@ -181,8 +182,7 @@ class OffboardControl(Node):
             trajectory_msg.position[1] = self.next_pos_ned[1]
             trajectory_msg.position[2] = self.next_pos_ned[2]
             self.publisher_trajectory.publish(trajectory_msg)
-
-
+            
 
 def main(args=None):
     rclpy.init(args=args)
