@@ -11,6 +11,7 @@ import numpy as np
 from rclpy.node import Node
 from rclpy.clock import Clock
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy, QoSDurabilityPolicy
+import navpy
 
 from px4_msgs.msg import OffboardControlMode
 from px4_msgs.msg import TrajectorySetpoint
@@ -78,11 +79,32 @@ class OffboardMission(Node):
 
         self.counter = np.uint16(0)                                 # disable for an experiment
 
-        self.wpt_set_ = np.array([[0, 0, -1.2],
-                                  [0.0,-10.0,-1.2],
-                                  [10,-15,-1.2],
-                                  [20,-15,-1.2]])
+        # self.wpt_set_ = np.array([[0, 0, -1.2],
+        #                           [0.0,-10.0,-1.2],
+        #                           [10,-15,-1.2],
+        #                           [20,-15,-1.2]])
         
+         # Interesting trajectory origin
+        self.lla_ref = np.array([24.484043629238872, 54.36068616768677, 0]) # latlonele -> (deg,deg,m)
+        self.waypoint_idx = 0
+        self.waypoints_lla = np.array([
+            [24.484326113268185, 54.360644616972564, 10],
+           [24.48476311664666, 54.3614948536716, 20],
+           [24.485097533474377, 54.36197496905472, 20],
+           [24.485400216562002, 54.3625570084458, 25], 
+           [24.48585179883862, 54.36321951405934, 25], 
+           [24.486198417650844, 54.363726451568475, 25], 
+           [24.486564563238797, 54.36423338904003, 20], 
+           [24.486894093361375, 54.364729597702144, 20], 
+           [24.486664642851466, 54.36508096711639, 20],
+           [24.486396136401133, 54.365263357350244, 25],
+           [24.486066604972933, 54.36541087887424, 10],
+           [24.485610141502686, 54.36572201510017,0],
+        ])
+        self.wpt_set_ = self.next_pos_ned = navpy.lla2ned(self.waypoints_lla[:,0], self.waypoints_lla[:,1],
+                    self.waypoints_lla[:,2],self.lla_ref[0], self.lla_ref[1], self.lla_ref[2],
+                    latlon_unit='deg', alt_unit='m', model='wgs84')
+
         self.theta  = np.float64(0.0)
         self.omega  = np.float64(1/10)
 
