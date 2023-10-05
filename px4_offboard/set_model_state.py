@@ -22,7 +22,7 @@ class MocapGzStream(Node):
     """
     def __init__(self, target_name="drone162") -> None:
         self.target_name = target_name
-        super().__init__(f"set_{target_name}_trajectory")
+        super().__init__("mocap_gz_stream")
         ## Configure subscritpions    
 
         self.client = self.create_client(SetEntityPose, "/world/AbuDhabi/set_pose")
@@ -48,7 +48,7 @@ class MocapGzStream(Node):
         
 
     def cmdloop_callback(self):
-        if self.drone_pose.pose.x is not None:
+        if self.drone_pose.pose is not None:
             self.request.entity = self.entity
             self.request.pose = self.drone_pose.pose
             future = self.client.call_async(self.request)
