@@ -57,8 +57,10 @@ class SpooferTraj(Node):
         self.entity = Entity()
         self.entity.name = self.target_name
         self.request = SetEntityPose.Request()
-        timer_period = 0.05  # seconds
+        timer_period = 0.1  # seconds
         self.timer = self.create_timer(timer_period, self.cmdloop_callback)
+        self.count = 0 
+        self.mode = 0 
     
     def vector2PoseMsg(self,position, attitude):
         pose_msg = Pose()
@@ -88,7 +90,23 @@ class SpooferTraj(Node):
         self.vehicle_local_velocity[2] = -msg.vz
 
     def cmdloop_callback(self):
-        vehicle_pose_msg = self.vector2PoseMsg(self.vehicle_local_position, self.vehicle_attitude)
+        
+        # spoofer_position = [self.count*1.0, self.count*1.0, 5.0] 
+        
+        # if self.mode ==0:
+        #     self.count+=1
+        #     if (self.count>100):
+        #         self.mode=1
+        # else:
+        #     self.count-=1
+        #     if (self.count<0):
+        #         self.count=0 
+
+        # print(self.count)   
+
+        spoofer_position = [10.0, 10.0, 5.0] 
+                    
+        vehicle_pose_msg = self.vector2PoseMsg(spoofer_position, self.vehicle_attitude)
         self.request.entity = self.entity
         self.request.pose = vehicle_pose_msg
         future = self.client.call_async(self.request)
