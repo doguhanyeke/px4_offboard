@@ -23,7 +23,7 @@ class SpooferTraj(Node):
     """
     def __init__(self, target_name="spoofer") -> None:
         self.target_name = target_name
-        super().__init__(f"set_{target_name}_trajectory")
+        super().__init__('spoofer_gz_stream')
         ## Configure subscritpions
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
@@ -91,20 +91,20 @@ class SpooferTraj(Node):
 
     def cmdloop_callback(self):
         
-        # spoofer_position = [self.count*1.0, self.count*1.0, 5.0] 
+        spoofer_position = [self.count*0.01, self.count*0.01, 5.0] 
         
-        # if self.mode ==0:
-        #     self.count+=1
-        #     if (self.count>100):
-        #         self.mode=1
-        # else:
-        #     self.count-=1
-        #     if (self.count<0):
-        #         self.count=0 
+        if self.mode ==0:
+            self.count+=1
+            if (self.count>100):
+                self.mode=1
+        else:
+            self.count-=1
+            if (self.count<0):
+                self.count=0 
 
-        # print(self.count)   
+        print(self.count)   
 
-        spoofer_position = [10.0, 10.0, 5.0] 
+        #spoofer_position = [10.0, 10.0, 5.0] 
                     
         vehicle_pose_msg = self.vector2PoseMsg(spoofer_position, self.vehicle_attitude)
         self.request.entity = self.entity

@@ -18,9 +18,19 @@ def generate_launch_description():
     param_bridge = Node(
         package='ros_gz_bridge',
         executable='parameter_bridge',
-        arguments=['/world/Abhudhabi/set_pose@ros_gz_interfaces/srv/SetEntityPose']
+        arguments=['/world/AbuDhabi/set_pose@ros_gz_interfaces/srv/SetEntityPose']
+        
+    )
+
+    spoofer_node = Node(
+        package='px4_offboard',
+        executable='spoofer_gz_stream',
+        name="spoofer",
+        output = 'screen'     
+
     )
 
     return LaunchDescription([
         param_bridge,
+        spoofer_node,
     ])
