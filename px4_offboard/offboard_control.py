@@ -172,7 +172,7 @@ class OffboardControl(Node):
 
         if self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
             # If current waypoint is reached, move to next waypoint
-            if (np.linalg.norm(self.local_pos_ned - self.next_pos_ned) < 1):
+            if (np.linalg.norm(self.local_pos_ned - self.next_pos_ned) < 5):
                 self.waypoint_idx += 1
             self.next_pos_ned = navpy.lla2ned(self.waypoints_lla[self.waypoint_idx,0], self.waypoints_lla[self.waypoint_idx,1],
                     self.waypoints_lla[self.waypoint_idx,2],self.lla_ref[0], self.lla_ref[1], self.lla_ref[2],

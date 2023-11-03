@@ -12,6 +12,7 @@ from px4_msgs.msg import VehicleAttitude
 from px4_msgs.msg import VehicleLocalPosition
 from ros_gz_interfaces.srv import SetEntityPose
 from ros_gz_interfaces.msg import Entity
+from std_msgs.msg import Bool
 
 
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
@@ -43,7 +44,7 @@ class SpooferTraj(Node):
             f"{fmu}/out/vehicle_local_position",
             self.vehicle_local_position_callback,
             qos_profile)
-        
+        self.spoofing_flag_pub = self.create_publisher(Bool, "/spoofing_flag", 10)
         self.vehicle_attitude = np.array([1.0, 0.0, 0.0, 0.0])
         self.vehicle_local_position = np.array([0.0, 0.0, 0.0])
         self.vehicle_local_velocity = np.array([0.0, 0.0, 0.0])
@@ -90,6 +91,9 @@ class SpooferTraj(Node):
         self.vehicle_local_velocity[2] = -msg.vz
 
     def cmdloop_callback(self):
+        bool_msg = Bool()
+        bool_msg.data = True
+        self.spoofing_flag_pub.publish(bool_msg)
         
         spoofer_position = [self.count*0.01, self.count*0.01, 5.0] 
         

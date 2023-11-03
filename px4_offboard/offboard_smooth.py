@@ -71,7 +71,7 @@ class OffboardMission(Node):
             qos_profile_pub)                                        # disable for an experiment
 
         # parameters for callback
-        self.timer_period   =   0.02  # seconds
+        self.timer_period   =   0.01  # seconds
         self.timer = self.create_timer(self.timer_period, self.cmdloop_callback)
 
         self.flight_phase_ = np.uint8(1)
@@ -88,32 +88,36 @@ class OffboardMission(Node):
         self.lla_ref = np.array([24.484043629238872, 54.36068616768677, 0]) # latlonele -> (deg,deg,m)
         self.waypoint_idx = 0
         self.waypoints_lla = np.array([
-            [24.484326113268185, 54.360644616972564, 10],
+            [24.484326113268185, 54.360644616972564, 20],
            [24.48476311664666, 54.3614948536716, 20],
            [24.485097533474377, 54.36197496905472, 20],
-           [24.485400216562002, 54.3625570084458, 25], 
-           [24.48585179883862, 54.36321951405934, 25], 
-           [24.486198417650844, 54.363726451568475, 25], 
-           [24.486564563238797, 54.36423338904003, 20], 
-           [24.486894093361375, 54.364729597702144, 20], 
-           [24.486664642851466, 54.36508096711639, 20],
-           [24.486396136401133, 54.365263357350244, 25],
-           [24.486066604972933, 54.36541087887424, 10],
-           [24.485610141502686, 54.36572201510017,0],
+           [24.485400216562002, 54.3625570084458, 20], 
+           [24.48585179883862, 54.36321951405934, 20], 
+           [24.486198417650844, 54.363726451568475, 10], 
+           [24.486564563238797, 54.36423338904003, 0], 
+        #    [24.486894093361375, 54.364729597702144, 20], 
+        #    [24.486664642851466, 54.36508096711639, 20],
+        #    [24.486396136401133, 54.365263357350244, 25],
+        #    [24.486066604972933, 54.36541087887424, 10],
+        #    [24.485610141502686, 54.36572201510017,0],
         ])
         self.wpt_set_ = self.next_pos_ned = navpy.lla2ned(self.waypoints_lla[:,0], self.waypoints_lla[:,1],
                     self.waypoints_lla[:,2],self.lla_ref[0], self.lla_ref[1], self.lla_ref[2],
                     latlon_unit='deg', alt_unit='m', model='wgs84')
 
+        print(self.wpt_set_)
+
+       
+
         self.theta  = np.float64(0.0)
-        self.omega  = np.float64(1/10)
+        self.omega  = np.float64(1/20)
 
         self.cur_wpt_ = np.array([0.0,0.0,0.0],dtype=np.float64)
         self.prev_wpt_ = np.array([0.0,0.0,0.0],dtype=np.float64)
         
         self.wpt_idx_ = np.int8(0)
 
-        self.nav_wpt_reach_rad_ =   np.float32(0.1)     # waypoint reach condition radius
+        self.nav_wpt_reach_rad_ =   np.float32(0.5)     # waypoint reach condition radius
 
         # variables for subscribers
         self.nav_state = VehicleStatus.NAVIGATION_STATE_MAX
@@ -195,7 +199,7 @@ class OffboardMission(Node):
         # hold its position at a starting point
         # proceed to offboard wpt mission when the multicoptor reaches a setpoint
         if (self.flight_phase_ == 1) and (self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD):
-            print("Current Mode: Offboard (Position hold at a starting point)")
+            #print("Current Mode: Offboard (Position hold at a starting point)")
             # entry:
             if self.entry_execute_:
                 self.entry_execute_ 	    = 	0
@@ -206,7 +210,7 @@ class OffboardMission(Node):
             self.trajectory_setpoint_x = self.theta*self.cur_wpt_[0]+(1-self.theta)*self.prev_wpt_[0]
             self.trajectory_setpoint_y = self.theta*self.cur_wpt_[1]+(1-self.theta)*self.prev_wpt_[1]
             self.trajectory_setpoint_z = self.theta*self.cur_wpt_[2]+(1-self.theta)*self.prev_wpt_[2]
-            self.trajectory_setpoint_yaw  =   np.float64(-np.pi/2)
+            self.trajectory_setpoint_yaw  =   np.float64(np.pi/2 -np.pi/4)
             self.publish_trajectory_setpoint()
             self.theta = self.theta+self.omega*self.timer_period
             self.theta = np.clip(self.theta,a_min=0.0,a_max=1.0)
@@ -222,7 +226,7 @@ class OffboardMission(Node):
         # phase 2: engage offboard wpt mission - hold offboard/position mode
         # exit when the offboard mode control turns into off
         elif (self.flight_phase_ == 2) and (self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD):
-            print("Current Mode: Offboard (wpt mission)")
+            #print("Current Mode: Offboard (wpt mission)")
             # entry:
             if self.entry_execute_:
                 self.entry_execute_ 	    = 	0
@@ -234,7 +238,7 @@ class OffboardMission(Node):
                 self.trajectory_setpoint_x = self.theta*self.cur_wpt_[0]+(1-self.theta)*self.prev_wpt_[0]
                 self.trajectory_setpoint_y = self.theta*self.cur_wpt_[1]+(1-self.theta)*self.prev_wpt_[1]
                 self.trajectory_setpoint_z = self.theta*self.cur_wpt_[2]+(1-self.theta)*self.prev_wpt_[2]
-                self.trajectory_setpoint_yaw  =   np.float64(-np.pi/2)
+                self.trajectory_setpoint_yaw  =   np.float64(np.pi/2 - np.pi/4)
                 self.publish_trajectory_setpoint()
                 self.theta = self.theta+self.omega*self.timer_period
                 self.theta = np.clip(self.theta,a_min=0.0,a_max=1.0)
@@ -251,8 +255,11 @@ class OffboardMission(Node):
                     if (self.wpt_idx_ == self.wpt_set_.shape[0] - 1 ):
                         print("Offboard mission finished")
                     else:    
+                        print("Waypoint: "+str(self.wpt_idx_))
                         self.wpt_idx_ = self.wpt_idx_+1
                         self.cur_wpt_ = self.wpt_set_[self.wpt_idx_]
+                        
+
 
 def main():
     parser = argparse.ArgumentParser(description='Delivering parameters for tests')
