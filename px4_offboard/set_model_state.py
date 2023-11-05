@@ -37,7 +37,7 @@ class MocapGzStream(Node):
         )
         print(f"setting state for {self.target_name}")
         self.entity = Entity()
-        self.entity.name = self.target_name
+        self.entity.name = 'x500_1'
         self.request = SetEntityPose.Request()
         timer_period = 0.01  # seconds
         self.timer = self.create_timer(timer_period, self.cmdloop_callback)
