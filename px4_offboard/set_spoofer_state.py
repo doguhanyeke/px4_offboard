@@ -58,7 +58,7 @@ class SpooferTraj(Node):
         self.entity = Entity()
         self.entity.name = self.target_name
         self.request = SetEntityPose.Request()
-        timer_period = 0.1  # seconds
+        timer_period = 0.01  # seconds
         self.timer = self.create_timer(timer_period, self.cmdloop_callback)
         self.count = 0 
         self.mode = 0 
@@ -85,30 +85,24 @@ class SpooferTraj(Node):
         # TODO: handle NED->ENU transformation 
         self.vehicle_local_position[0] = msg.y
         self.vehicle_local_position[1] = msg.x
-        self.vehicle_local_position[2] = -msg.z + 10
+        self.vehicle_local_position[2] = -msg.z
         self.vehicle_local_velocity[0] = msg.vy
         self.vehicle_local_velocity[1] = msg.vx
         self.vehicle_local_velocity[2] = -msg.vz
 
     def cmdloop_callback(self):
-        bool_msg = Bool()
-        bool_msg.data = True
-        self.spoofing_flag_pub.publish(bool_msg)
         
-        spoofer_position = [self.count*0.01, self.count*0.01, 5.0] 
+        spoofer_position = [self.vehicle_local_position[0] , 
+                            self.vehicle_local_position[1]+ self.count*0.01, 25.0] 
         
         if self.mode ==0:
             self.count+=1
-            if (self.count>100):
+            if (self.count>500):
                 self.mode=1
         else:
             self.count-=1
             if (self.count<0):
-                self.count=0 
-
-        print(self.count)   
-
-        #spoofer_position = [10.0, 10.0, 5.0] 
+                self.mode=0 
                     
         vehicle_pose_msg = self.vector2PoseMsg(spoofer_position, self.vehicle_attitude)
         self.request.entity = self.entity
@@ -116,8 +110,12 @@ class SpooferTraj(Node):
         future = self.client.call_async(self.request)
         if future.done():
             response = future.result()
-            print("response: " + response)
 
+            
+        bool_msg = Bool()
+        bool_msg.data = True
+        self.spoofing_flag_pub.publish(bool_msg)
+        
 def main(args=None):
     rclpy.init(args=args)
     

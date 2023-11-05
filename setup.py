@@ -27,7 +27,6 @@ setup(
     entry_points={
         'console_scripts': [
                 'offboard_control = px4_offboard.offboard_control:main',
-                'offboard_smooth = px4_offboard.offboard_smooth:main',
                 'visualizer = px4_offboard.visualizer:main',
                 'mocap_gz_stream = px4_offboard.set_model_state:main',
                 'spoofer_gz_stream = px4_offboard.set_spoofer_state:main',
