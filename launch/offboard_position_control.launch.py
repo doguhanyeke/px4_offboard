@@ -42,33 +42,28 @@ import os
 
 
 def generate_launch_description():
-    package_dir = get_package_share_directory('px4_offboard')
     return LaunchDescription([
-        # Node(
-        #    package='px4_offboard',
-        #    executable='visualizer',
-        #    name='visualizer'
-        # ),
+        Node(
+           package='px4_offboard',
+           executable='visualizer',
+           name='visualizer'
+        ),
         Node(
             package='px4_offboard',
             executable='offboard_control',
             output ='screen'
         ),
         Node(
-            package='offboard_detector',
-            executable='gz_true_pos_pub',
-            output ='screen'
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            arguments = ["0", "0", "0", "0", "0", "0", "map", "drone_true"],
+            output="screen"
         ),
         Node(
-            package='offboard_detector',
-            executable='observer_detector.py',
-        ),
-
-        # Node(
-        #    package='rviz2',
-        #    namespace='',
-        #    executable='rviz2',
-        #    name='rviz2',
-        #    arguments=['-d', [os.path.join(package_dir, 'visualize.rviz')]]
-        # )
+           package='rviz2',
+           namespace='',
+           executable='rviz2',
+           name='rviz2',
+           arguments=['-d', [os.path.join(get_package_share_directory('px4_offboard'), 'visualize.rviz')]]
+        )
     ])

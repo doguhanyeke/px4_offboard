@@ -31,7 +31,7 @@ class MocapGzStream(Node):
         
         self.mocap_pose_sub_ = self.create_subscription(
             PoseStamped,
-            '/drone162/pose',
+            '/drone161/pose',
             self.pose_cb,
             10
         )
