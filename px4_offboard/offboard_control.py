@@ -71,7 +71,7 @@ class OffboardMission(Node):
             qos_profile_pub)                                        # disable for an experiment
 
         # parameters for callback
-        self.timer_period   =   0.05  # seconds
+        self.timer_period   =   0.04  # seconds
         self.timer = self.create_timer(self.timer_period, self.cmdloop_callback)
         
          # Interesting trajectory origin
@@ -150,7 +150,8 @@ class OffboardMission(Node):
         if self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
             norm = np.linalg.norm(self.next_wpt_ - self.prev_wpt_)
             trajectory_msg = TrajectorySetpoint()
-
+            # Move in the unit vector direction to the next way point with the given velocity. 
+            # Clipping to make sure that it remains within the bounds until the drone is reached.
             x_pos = np.clip(self.local_pos_ned_[0] \
                             + self.velocity * (self.next_wpt_[0] - self.prev_wpt_[0])/norm, \
                                 self.prev_wpt_[0], self.next_wpt_[0])

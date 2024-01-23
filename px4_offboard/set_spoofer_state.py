@@ -54,7 +54,6 @@ class SpooferTraj(Node):
         while not self.client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('gazebo set_entity_state service is not available, waiting...')
 
-        print(f"setting state for {self.target_name}")
         self.entity = Entity()
         self.entity.name = self.target_name
         self.request = SetEntityPose.Request()
@@ -62,6 +61,7 @@ class SpooferTraj(Node):
         self.timer = self.create_timer(timer_period, self.cmdloop_callback)
         self.count = 0 
         self.mode = 0 
+        self.attack_count = 0
     
     def vector2PoseMsg(self,position, attitude):
         pose_msg = Pose()
@@ -93,11 +93,11 @@ class SpooferTraj(Node):
     def cmdloop_callback(self):
         
         spoofer_position = [self.vehicle_local_position[0] , 
-                            self.vehicle_local_position[1]+ self.count*0.01, 25.0] 
-        
+                            self.vehicle_local_position[1]+ self.count*0.005, 36.0] 
+        #self.count+=1
         if self.mode ==0:
             self.count+=1
-            if (self.count>500):
+            if (self.count>400):
                 self.mode=1
         else:
             self.count-=1
@@ -110,11 +110,13 @@ class SpooferTraj(Node):
         future = self.client.call_async(self.request)
         if future.done():
             response = future.result()
-
-            
-        bool_msg = Bool()
-        bool_msg.data = True
-        self.spoofing_flag_pub.publish(bool_msg)
+        
+        # Adding delay for not causing sudden jump in residuals. 
+        self.attack_count += 1
+        if self.attack_count > 100:    
+            bool_msg = Bool()
+            bool_msg.data = True
+            self.spoofing_flag_pub.publish(bool_msg)
         
 def main(args=None):
     rclpy.init(args=args)
