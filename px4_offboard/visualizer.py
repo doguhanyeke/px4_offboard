@@ -37,7 +37,7 @@ __contact__ = "jalim@ethz.ch"
 
 from re import M
 import numpy as np
-
+import math
 import rclpy
 from rclpy.node import Node
 from rclpy.clock import Clock
@@ -46,7 +46,8 @@ from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from px4_msgs.msg import VehicleAttitude
 from px4_msgs.msg import VehicleLocalPosition
 from px4_msgs.msg import TrajectorySetpoint
-from geometry_msgs.msg import PoseStamped, Point
+from geometry_msgs.msg import PoseStamped, Point, TransformStamped
+from tf2_ros import TransformBroadcaster
 from nav_msgs.msg import Path
 from visualization_msgs.msg import Marker
 
@@ -63,7 +64,6 @@ def vector2PoseMsg(frame_id, position, attitude):
     pose_msg.pose.position.y = position[1]
     pose_msg.pose.position.z = position[2]
     return pose_msg
-
 
 class PX4Visualizer(Node):
     def __init__(self):
@@ -104,9 +104,8 @@ class PX4Visualizer(Node):
         self.vehicle_path_pub = self.create_publisher(
             Path, "/px4_visualizer/vehicle_path", 10
         )
-        self.setpoint_path_pub = self.create_publisher(
-            Path, "/px4_visualizer/setpoint_path", 10
-        )
+        # Initialize the transform broadcaster
+        self.tf_broadcaster = TransformBroadcaster(self)
 
         self.vehicle_attitude = np.array([1.0, 0.0, 0.0, 0.0])
         self.vehicle_local_position = np.array([0.0, 0.0, 0.0])
@@ -124,17 +123,17 @@ class PX4Visualizer(Node):
     def vehicle_attitude_callback(self, msg):
         # TODO: handle NED->ENU transformation
         self.vehicle_attitude[0] = msg.q[0]
-        self.vehicle_attitude[1] = msg.q[1]
+        self.vehicle_attitude[1] = -msg.q[1]
         self.vehicle_attitude[2] = -msg.q[2]
-        self.vehicle_attitude[3] = -msg.q[3]
+        self.vehicle_attitude[3] = msg.q[3]
 
     def vehicle_local_position_callback(self, msg):
         # TODO: handle NED->ENU transformation
-        self.vehicle_local_position[0] = msg.x
-        self.vehicle_local_position[1] = -msg.y
+        self.vehicle_local_position[0] = msg.y
+        self.vehicle_local_position[1] = msg.x
         self.vehicle_local_position[2] = -msg.z
-        self.vehicle_local_velocity[0] = msg.vx
-        self.vehicle_local_velocity[1] = -msg.vy
+        self.vehicle_local_velocity[0] = msg.vy
+        self.vehicle_local_velocity[1] = msg.vx
         self.vehicle_local_velocity[2] = -msg.vz
 
     def trajectory_setpoint_callback(self, msg):
@@ -184,17 +183,37 @@ class PX4Visualizer(Node):
             "map", self.vehicle_local_position, self.vehicle_attitude
         )
         self.vehicle_pose_pub.publish(vehicle_pose_msg)
+        t = TransformStamped()
+
+        # Read message content and assign it to
+        # corresponding tf variables
+        t.header.stamp = self.get_clock().now().to_msg()
+        t.header.frame_id = 'map'
+        t.child_frame_id = 'drone'
+
+        # Turtle only exists in 2D, thus we get x and y translation
+        # coordinates from the message and set the z coordinate to 0
+        t.transform.translation.x = vehicle_pose_msg.pose.position.x
+        t.transform.translation.y = vehicle_pose_msg.pose.position.y
+        t.transform.translation.z = vehicle_pose_msg.pose.position.z
+
+        # For the same reason, turtle can only rotate around one axis
+        # and this why we set rotation in x and y to 0 and obtain
+        # rotation in z axis from the message
+        t.transform.rotation.x = vehicle_pose_msg.pose.orientation.x
+        t.transform.rotation.y = vehicle_pose_msg.pose.orientation.y
+        t.transform.rotation.z = vehicle_pose_msg.pose.orientation.z
+        t.transform.rotation.w = vehicle_pose_msg.pose.orientation.w
+
+        # Send the transformation
+        self.tf_broadcaster.sendTransform(t)
 
         # Publish time history of the vehicle path
         self.vehicle_path_msg.header = vehicle_pose_msg.header
         self.append_vehicle_path(vehicle_pose_msg)
         self.vehicle_path_pub.publish(self.vehicle_path_msg)
 
-        # Publish time history of the vehicle path
-        setpoint_pose_msg = vector2PoseMsg("map", self.setpoint_position, self.vehicle_attitude)
-        self.setpoint_path_msg.header = setpoint_pose_msg.header
-        self.append_setpoint_path(setpoint_pose_msg)
-        self.setpoint_path_pub.publish(self.setpoint_path_msg)
+       
 
         # Publish arrow markers for velocity
         velocity_msg = self.create_arrow_marker(1, self.vehicle_local_position, self.vehicle_local_velocity)

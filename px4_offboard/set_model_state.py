@@ -31,11 +31,10 @@ class MocapGzStream(Node):
         
         self.mocap_pose_sub_ = self.create_subscription(
             PoseStamped,
-            '/drone161/pose',
+            '/drone162/pose',
             self.pose_cb,
             10
         )
-        print(f"setting state for {self.target_name}")
         self.entity = Entity()
         self.entity.name = 'x500_1'
         self.request = SetEntityPose.Request()
@@ -53,8 +52,8 @@ class MocapGzStream(Node):
                 self.request.entity = self.entity
                 self.request.pose = self.drone_pose.pose
                 future = self.client.call_async(self.request)
-                if future.done():
-                    response = future.result()
+                # if future.done():
+                #     response = future.result()
 
 def main(args=None):
     rclpy.init(args=args)

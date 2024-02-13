@@ -38,6 +38,8 @@ __contact__ = "jalim@ethz.ch"
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
+from launch.actions import IncludeLaunchDescription, ExecuteProcess
+from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 import os
 
 
@@ -53,17 +55,42 @@ def generate_launch_description():
             executable='offboard_control',
             output ='screen'
         ),
+
+        # Node(
+        #     package='tf2_ros',
+        #     executable='static_transform_publisher',
+        #     arguments = ["0", "0", "0", "0", "0", "0", "map", "odom"],
+        #     output="screen"
+        # ),
+        
+
+        # Node(
+        #     package='ros_gz_bridge', 
+        #     executable='parameter_bridge',
+        #     output='screen',
+        #     arguments= [  
+        #     '/model/x500_1/pose@'
+        #     'tf2_msgs/msg/TFMessage[gz.msgs.Pose_V'],
+        #     remappings=[
+        #         ('/model/x500_1/pose', '/tf'),
+        #     ]
+        # ),
+        
         Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            arguments = ["0", "0", "0", "0", "0", "0", "map", "drone_true"],
-            output="screen"
+            package='ros_gz_bridge', 
+            executable='parameter_bridge',
+            output='screen',
+            arguments= [  
+            '/model/camera_0/pose@'
+            'tf2_msgs/msg/TFMessage[gz.msgs.Pose_V'],
+            # remappings=[
+            #     ('/model/camera_0/pose', '/tf'),
+            # ]
         ),
-        Node(
-           package='rviz2',
-           namespace='',
-           executable='rviz2',
-           name='rviz2',
-           arguments=['-d', [os.path.join(get_package_share_directory('px4_offboard'), 'visualize.rviz')]]
-        )
+        IncludeLaunchDescription(XMLLaunchDescriptionSource(
+            os.path.join(
+                get_package_share_directory("px4_gps"),
+                "launch/foxglove_bridge.launch",))
+        ),
+        ExecuteProcess(cmd=["foxglove-studio"]),
     ])
