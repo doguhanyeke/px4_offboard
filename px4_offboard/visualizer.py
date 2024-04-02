@@ -189,7 +189,7 @@ class PX4Visualizer(Node):
         # corresponding tf variables
         t.header.stamp = self.get_clock().now().to_msg()
         t.header.frame_id = 'map'
-        t.child_frame_id = 'drone'
+        t.child_frame_id = 'Estimated_Pose'
 
         # Turtle only exists in 2D, thus we get x and y translation
         # coordinates from the message and set the z coordinate to 0

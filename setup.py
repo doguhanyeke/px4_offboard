@@ -28,6 +28,7 @@ setup(
         'console_scripts': [
                 'offboard_control = px4_offboard.offboard_control:main',
                 'visualizer = px4_offboard.visualizer:main',
+                'visualizer_camera_network = px4_offboard.visualizer_camera_network:main',
                 'mocap_gz_stream = px4_offboard.set_model_state:main',
                 'spoofer_gz_stream = px4_offboard.set_spoofer_state:main',
         ],

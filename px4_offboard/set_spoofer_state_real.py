@@ -7,7 +7,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup, ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
-from geometry_msgs.msg import Pose
+from geometry_msgs.msg import Pose, PoseStamped
 from px4_msgs.msg import VehicleOdometry
 from ros_gz_interfaces.srv import SetEntityPose
 from ros_gz_interfaces.msg import Entity
@@ -23,20 +23,21 @@ class SpooferTraj(Node):
     """
     def __init__(self, target_name="spoofer") -> None:
         self.target_name = target_name
-        super().__init__('spoofer_gz_stream')
+        super().__init__('spoofer_gz_stream_real')
         ## Configure subscritpions
         qos_profile = QoSProfile(
             reliability=QoSReliabilityPolicy.RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
             history=QoSHistoryPolicy.RMW_QOS_POLICY_HISTORY_KEEP_LAST,
             depth=1
         )
-        self.ns = "px4_1"
-        self.odom_sub = self.create_subscription(
-            VehicleOdometry,
-            f'{self.ns}/fmu/out/vehicle_odometry',
-            self.odom_callback,
-            qos_profile)
-
+        self.ns = ""
+        
+        self.mocap_pose_sub_ = self.create_subscription(
+            PoseStamped,
+            '/drone162/pose',
+            self.pose_cb,
+            10
+        )
         self.spoofing_flag_pub = self.create_publisher(Bool, "/spoofing_flag", 10)
         self.client = self.create_client(SetEntityPose, "/world/AbuDhabi/set_pose")
         while not self.client.wait_for_service(timeout_sec=1.0):
@@ -50,7 +51,13 @@ class SpooferTraj(Node):
         self.count = 0 
         self.mode = 0 
         self.attack_count = 0
+
     
+    def pose_cb(self, msg: PoseStamped):
+        self.vehicle_local_position[0] = msg.pose.position.x 
+        self.vehicle_local_position[1] = msg.pose.position.y
+        self.vehicle_local_position[2] = msg.pose.position.z
+
     def vector2PoseMsg(self,position, attitude):
         pose_msg = Pose()
         pose_msg.orientation.w = attitude[0]
@@ -62,30 +69,22 @@ class SpooferTraj(Node):
         pose_msg.position.z = position[2]
         return pose_msg
     
-    def odom_callback(self,msg):
-        self.vehicle_local_position = np.array([msg.position[1], msg.position[0], -msg.position[2]],dtype=np.float64)
-        self.vehicle_attitude = np.array([msg.q[0], msg.q[1], -msg.q[2], -msg.q[3]], dtype=np.float64)
-        
-    
     def cmdloop_callback(self):
-        
-        spoofer_position = [self.vehicle_local_position[0] , 
-                            self.vehicle_local_position[1]+ self.count*0.005, 36.0] 
-        
         if self.mode ==0:
-            self.count+=1
-            if (self.count>10000):
+            self.count-=1
+            if (self.count>5000):
                 self.mode=1
         else:
-            self.count-=1
+            self.count+=1
             if (self.count<0):
                 self.mode=0 
-                    
+         
+        spoofer_position = [self.vehicle_local_position[0]+ self.count*0.001 , 
+                            self.vehicle_local_position[1], 10.0]             
         vehicle_pose_msg = self.vector2PoseMsg(spoofer_position, self.vehicle_attitude)
-        
         self.request = SetEntityPose.Request()
         entity = Entity()
-        entity.name = self.target_name
+        entity.name = 'spoofer'
         self.request.entity = entity
         self.request.pose = vehicle_pose_msg
         future = self.client.call_async(self.request)

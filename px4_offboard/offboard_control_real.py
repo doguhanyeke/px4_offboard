@@ -74,10 +74,8 @@ class OffboardMission(Node):
         self.timer = self.create_timer(self.timer_period, self.cmdloop_callback)
         
         self.wpt_set_ = np.array([[0, 0,-1.2],
-                                  [4.0, 0.0,-2.2],
-                                  [2.0, 2.0,-0.2],
-                                  [1.0, -12.0,-12],
-                                  [0.0, 0.0,-2.2]
+                                  [0, -1.3,-1.2],
+                                  [5.0, -1.3, -1.2]
                                   ])
         self.velocity = 1
         self.wpt_idx_ = np.int8(0)
@@ -117,11 +115,11 @@ class OffboardMission(Node):
         offboard_msg.acceleration=False
         self.publisher_offboard_mode.publish(offboard_msg)
         
-        #SiTL Test
+        # #SiTL Test
         self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1., 6.)
         if self.nav_state != VehicleStatus.ARMING_STATE_ARMED and self.arm_counter < 10:
-            self.arm_counter += 1
-            self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0)
+             self.arm_counter += 1
+             self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0)
 
 
         if self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:

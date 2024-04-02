@@ -109,15 +109,21 @@ class OffboardMission(Node):
         #    [24.486066604972933, 54.36541087887424, 10],
         #    [24.485610141502686, 54.36572201510017,0],
         ])
-        self.wpt_set_ = navpy.lla2ned(self.waypoints_lla[:,0], self.waypoints_lla[:,1],
-                    self.waypoints_lla[:,2],self.lla_ref[0], self.lla_ref[1], self.lla_ref[2],
-                    latlon_unit='deg', alt_unit='m', model='wgs84')
+        # self.wpt_set_ = navpy.lla2ned(self.waypoints_lla[:,0], self.waypoints_lla[:,1],
+        #             self.waypoints_lla[:,2],self.lla_ref[0], self.lla_ref[1], self.lla_ref[2],
+        #             latlon_unit='deg', alt_unit='m', model='wgs84')
+
+        self.wpt_set_ = np.array([[0, 0,-5],
+                                  [5, 13,-5],
+                                  [7.5, 15 ,-5],
+                                  [10, 17, -5]
+                                  ])
 
         self.arm_counter = 0
 
-        self.velocity = 10
+        self.velocity = 2
         self.wpt_idx_ = np.int8(0)
-        self.nav_wpt_reach_rad_ =   np.float32(10)     # waypoint reach condition radius
+        self.nav_wpt_reach_rad_ =   np.float32(0.5)     # waypoint reach condition radius
         # variables for subscribers
         self.nav_state = VehicleStatus.NAVIGATION_STATE_MAX
         self.local_pos_ned_     =   None

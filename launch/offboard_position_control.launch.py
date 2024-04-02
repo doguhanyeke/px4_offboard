@@ -55,7 +55,11 @@ def generate_launch_description():
             executable='offboard_control',
             output ='screen'
         ),
-
+        Node(
+           package='px4_offboard',
+           executable='visualizer_camera_network',
+           name='visualizer_camera_network'
+        ),
         # Node(
         #     package='tf2_ros',
         #     executable='static_transform_publisher',
@@ -92,5 +96,5 @@ def generate_launch_description():
                 get_package_share_directory("px4_gps"),
                 "launch/foxglove_bridge.launch",))
         ),
-        ExecuteProcess(cmd=["foxglove-studio"]),
+        #ExecuteProcess(cmd=["foxglove-studio"]),
     ])
