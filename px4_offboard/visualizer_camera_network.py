@@ -33,7 +33,7 @@
 ############################################################################
 
 __author__ = "Kartik Anand Pant"
-__contact__ = "kpant@purdue.edu"
+__contact__ = "kpant14@gmail.com"
 
 from re import M
 import numpy as np
@@ -53,8 +53,8 @@ class CameraNetworkVisualizer(Node):
         super().__init__("visualizer_camera_network")
         # Configure subscritpions
         qos_profile = QoSProfile(
-            reliability=QoSReliabilityPolicy.RMW_QOS_POLICY_RELIABILITY_BEST_EFFORT,
-            history=QoSHistoryPolicy.RMW_QOS_POLICY_HISTORY_KEEP_LAST,
+            reliability=QoSReliabilityPolicy.BEST_EFFORT,
+            history=QoSHistoryPolicy.KEEP_LAST,
             depth=1,
         )
         # Initialize the transform broadcaster
@@ -104,21 +104,13 @@ class CameraNetworkVisualizer(Node):
             t.header.stamp = self.get_clock().now().to_msg()
             t.header.frame_id = 'map'
             t.child_frame_id = f'Camera {i+1}'
-
-            # Turtle only exists in 2D, thus we get x and y translation
-            # coordinates from the message and set the z coordinate to 0
             t.transform.translation.x = cam_list[i,0]
             t.transform.translation.y = cam_list[i,1]
             t.transform.translation.z = cam_list[i,2]
-
-            # For the same reason, turtle can only rotate around one axis
-            # and this why we set rotation in x and y to 0 and obtain
-            # rotation in z axis from the message
             t.transform.rotation.x = 0.0
             t.transform.rotation.y = 0.0
             t.transform.rotation.z = 0.0
             t.transform.rotation.w = 1.0
-
             # Send the transformation
             self.tf_broadcaster.sendTransform(t)
     
@@ -157,11 +149,8 @@ def point_cloud(points, parent_frame):
        
 def main(args=None):
     rclpy.init(args=args)
-
     cam_visualizer = CameraNetworkVisualizer()
-
     rclpy.spin(cam_visualizer)
-
     cam_visualizer.destroy_node()
     rclpy.shutdown()
 

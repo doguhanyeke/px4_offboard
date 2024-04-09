@@ -32,34 +32,42 @@
 #
 ############################################################################
 
-__author__ = "Jaeyoung Lim"
-__contact__ = "jalim@ethz.ch"
+__author__ = "Kartik Anand Pant"
+__contact__ = "kpant14@gmail.com"
 
 from launch import LaunchDescription
+from launch.substitutions import LaunchConfiguration
+from launch.actions import DeclareLaunchArgument
 from launch_ros.actions import Node
-from ament_index_python.packages import get_package_share_directory
-import os
 
 def generate_launch_description():
-    package_dir = get_package_share_directory('px4_offboard')
+    px4_ns = LaunchConfiguration('px4_ns')
+
+    px4_ns_arg = DeclareLaunchArgument(
+        'px4_ns',
+        default_value='px4_1'
+    ) 
+
+    vis_node = Node(
+        package='px4_offboard',
+        executable='visualizer',
+        name='visualizer',
+        parameters=[
+            {'px4_ns': px4_ns},
+        ]   
+    )
+
+    offboard_node = Node(
+        package='px4_offboard',
+        executable='offboard_control_sitl',
+        name='offboard_control_sitl',
+        parameters=[
+            {'px4_ns': px4_ns},
+        ]   
+    )
+
     return LaunchDescription([
-        Node(
-            package='px4_offboard',
-            namespace='px4_offboard',
-            executable='visualizer',
-            name='visualizer'
-        ),
-        Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            arguments = ["0", "0", "0", "0", "0", "0", "map", "odom"],
-            output="screen"
-        ),
-        Node(
-            package='rviz2',
-            namespace='',
-            executable='rviz2',
-            name='rviz2',
-            arguments=['-d', [os.path.join(package_dir, 'visualize.rviz')]]
-        )
+        px4_ns_arg,
+        vis_node,
+        offboard_node,
     ])
