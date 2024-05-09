@@ -88,7 +88,7 @@ class OffboardSwarmMission(Node):
         # variables for subscribers
         self.nav_state = VehicleStatus.NAVIGATION_STATE_MAX
         self.local_pos_ned_     =   None
-        self.ocra2_setpoint = np.array([0,0,0])
+        self.ocra2_setpoint = np.array([0,0,0, 0,0,0])
         
        
     # subscriber callback
@@ -100,7 +100,7 @@ class OffboardSwarmMission(Node):
         self.local_pos_ned_      =   np.array([msg.x,msg.y,msg.z],dtype=np.float64)
 
     def trajectory_setpoint_callback(self,msg):
-        self.ocra2_setpoint      =   np.array([msg.position[0],msg.position[1],msg.position[2]],dtype=np.float64)
+        self.ocra2_setpoint      =   np.array([msg.position[0],msg.position[1],msg.position[2],msg.velocity[0],msg.velocity[1],msg.velocity[2]],dtype=np.float64)
     
 
     def publish_vehicle_command(self,command,param1=0.0,param2=0.0):            # disable for an experiment
@@ -120,9 +120,9 @@ class OffboardSwarmMission(Node):
         # Publish offboard control modes
         offboard_msg = OffboardControlMode()
         offboard_msg.timestamp = int(Clock().now().nanoseconds / 1000)
-        offboard_msg.position=True
-        offboard_msg.velocity=False
-        offboard_msg.acceleration=False
+        #offboard_msg.position=False
+        offboard_msg.velocity=True
+        #offboard_msg.acceleration=False
         self.publisher_offboard_mode.publish(offboard_msg)
         self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1., 6.)
         if self.nav_state != VehicleStatus.ARMING_STATE_ARMED and self.arm_counter < 10:
@@ -131,10 +131,13 @@ class OffboardSwarmMission(Node):
         
         if self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
             trajectory_msg = TrajectorySetpoint()
-            self.get_logger().info("Offboard")  
-            trajectory_msg.position[0]  = self.ocra2_setpoint[0]
-            trajectory_msg.position[1]  = self.ocra2_setpoint[1]
-            trajectory_msg.position[2]  = -5.0
+            trajectory_msg.position[0]  = np.nan
+            trajectory_msg.position[1]  = np.nan
+            trajectory_msg.position[2]  = np.nan
+            trajectory_msg.velocity[0]  = self.ocra2_setpoint[3]
+            trajectory_msg.velocity[1]  = self.ocra2_setpoint[4]
+            trajectory_msg.velocity[2]  = 5*self.ocra2_setpoint[5]
+            self.get_logger().info("Offboard" + str(self.ocra2_setpoint[3]) + str(self.ocra2_setpoint[4]))  
             self.publisher_trajectory.publish(trajectory_msg)
 
 
