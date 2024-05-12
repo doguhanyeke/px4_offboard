@@ -13,6 +13,8 @@ from px4_msgs.msg import OffboardControlMode
 from px4_msgs.msg import TrajectorySetpoint
 from px4_msgs.msg import VehicleStatus, VehicleLocalPosition, VehicleCommand
 from geometry_msgs.msg import PoseStamped
+from std_msgs.msg import Bool
+from functools import partial
 
 def vector2PoseMsg(frame_id, position, attitude):
     pose_msg = PoseStamped()
@@ -81,6 +83,18 @@ class OffboardSwarmMission(Node):
             f'{self.ns}/fmu/in/vehicle_command', 
             qos_profile_pub)                                        # disable for an experiment
 
+          
+        self.vehicle_hover_publisher = self.create_publisher(
+            Bool, 
+            f'{self.ns}/fmu/out/hover_status', 
+            qos_profile_pub) 
+            
+            
+        self.all_vehicle_hover_publisher = self.create_publisher(
+            Bool, 
+            f'{self.ns}/fmu/out/all_hover', 
+            qos_profile_pub)                                            # disable for an experiment
+
         # parameters for callback
         self.timer_period   =   0.04  # seconds
         self.timer = self.create_timer(self.timer_period, self.cmdloop_callback)
@@ -89,9 +103,28 @@ class OffboardSwarmMission(Node):
         self.nav_state = VehicleStatus.NAVIGATION_STATE_MAX
         self.local_pos_ned_     =   None
         self.ocra2_setpoint = np.array([0,0,0, 0,0,0])
+
+        self.hover = False
+        self.all_hover = False
+        self.N_drone = 3
+        self.hover_status = [False]*(self.N_drone)
+        self.hover_subscribers    =   [{'hover_sub':None} for _ in range(self.N_drone)]
+
+        for i in range(self.N_drone):
+
+            ns             =   f'/px4_{i+1}'
+            self.hover_subscribers[i]['hover_sub']     =   self.create_subscription(
+                Bool,
+                f'{ns}/fmu/out/hover_status',
+                partial(self.vehicle_hover_callback,id=i),                             # instead of lambda function lambda msg: self.vehicle_status_callback(msg,id=i), use partial function
+                qos_profile_sub)
         
        
     # subscriber callback
+    def vehicle_hover_callback(self, msg, id):
+        # TODO: handle NED->ENU transformation
+        self.hover_status[id] = msg.data
+
     def vehicle_status_callback(self, msg):
         # TODO: handle NED->ENU transformation
         self.nav_state = msg.nav_state
@@ -130,16 +163,38 @@ class OffboardSwarmMission(Node):
             self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0)
         
         if self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
-            trajectory_msg = TrajectorySetpoint()
-            trajectory_msg.position[0]  = np.nan
-            trajectory_msg.position[1]  = np.nan
-            trajectory_msg.position[2]  = np.nan
-            trajectory_msg.velocity[0]  = self.ocra2_setpoint[3]
-            trajectory_msg.velocity[1]  = self.ocra2_setpoint[4]
-            trajectory_msg.velocity[2]  = 5*self.ocra2_setpoint[5]
-            self.get_logger().info("Offboard" + str(self.ocra2_setpoint[3]) + str(self.ocra2_setpoint[4]))  
-            self.publisher_trajectory.publish(trajectory_msg)
+            hover_msg = Bool()
+            all_hover_msg = Bool()
 
+            if not self.hover and not self.all_hover:
+                trajectory_msg = TrajectorySetpoint()
+                trajectory_msg.position[0]  = 0.0
+                trajectory_msg.position[1]  = 0.0
+                trajectory_msg.position[2]  = -1.5
+                self.get_logger().info("Offboard")  
+                self.publisher_trajectory.publish(trajectory_msg)
+                # Reached the hover goal
+                if self.local_pos_ned_[2] < -1.45:
+                    self.hover = True     
+                # Check all vehicle hover status 
+                self.all_hover =all(self.hover_status) 
+                
+            else:
+                hover_msg.data = True
+                all_hover_msg.data = True
+
+                trajectory_msg = TrajectorySetpoint()
+                trajectory_msg.position[0]  = np.nan
+                trajectory_msg.position[1]  = np.nan
+                trajectory_msg.position[2]  = np.nan
+                trajectory_msg.velocity[0]  = self.ocra2_setpoint[3]
+                trajectory_msg.velocity[1]  = self.ocra2_setpoint[4]
+                trajectory_msg.velocity[2]  = 5*self.ocra2_setpoint[5]
+                self.get_logger().info("Offboard" + str(self.ocra2_setpoint[3]) + str(self.ocra2_setpoint[4]))  
+                self.publisher_trajectory.publish(trajectory_msg)
+            
+            self.vehicle_hover_publisher.publish(hover_msg)
+            self.all_vehicle_hover_publisher.publish(all_hover_msg)
 
 def main():
     rclpy.init(args=None)
