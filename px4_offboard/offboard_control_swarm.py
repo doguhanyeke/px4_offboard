@@ -165,20 +165,25 @@ class OffboardSwarmMission(Node):
         if self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD:
             hover_msg = Bool()
             all_hover_msg = Bool()
-
-            if not self.hover and not self.all_hover:
-                trajectory_msg = TrajectorySetpoint()
-                trajectory_msg.position[0]  = 0.0
-                trajectory_msg.position[1]  = 0.0
-                trajectory_msg.position[2]  = -1.5
-                self.get_logger().info("Offboard")  
-                self.publisher_trajectory.publish(trajectory_msg)
-                # Reached the hover goal
-                if self.local_pos_ned_[2] < -1.45:
-                    self.hover = True     
+            hover_msg.data = False
+            all_hover_msg.data = False 
+            if not self.all_hover: 
+                if not self.hover:
+                    trajectory_msg = TrajectorySetpoint()
+                    trajectory_msg.position[0]  = 0.0
+                    trajectory_msg.position[1]  = 0.0
+                    trajectory_msg.position[2]  = -1.5
+                    self.get_logger().info("Offboard")  
+                    self.publisher_trajectory.publish(trajectory_msg)
+                    # Reached the hover goal
+                    if self.local_pos_ned_[2] < -1.45:
+                        self.hover = True    
+                else:
+                    hover_msg.data = True
+                
                 # Check all vehicle hover status 
                 self.all_hover =all(self.hover_status) 
-                
+                self.get_logger().info(f'{self.all_hover}, {self.hover_status[0]}, {self.hover_status[1]}, {self.hover_status[2]}')
             else:
                 hover_msg.data = True
                 all_hover_msg.data = True
