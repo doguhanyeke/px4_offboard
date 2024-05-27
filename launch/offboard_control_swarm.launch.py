@@ -78,5 +78,5 @@ def generate_launch_description():
     return LaunchDescription([
         offboard_node_1,
         offboard_node_2,
-        offboard_node_3
+        offboard_node_3,
     ])

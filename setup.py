@@ -30,6 +30,7 @@ setup(
                 'offboard_control_swarm = px4_offboard.offboard_control_swarm:main',
                 'offboard_control_real = px4_offboard.offboard_control_real:main',
                 'visualizer = px4_offboard.visualizer:main',
+                'visualizer_swarm = px4_offboard.visualizer_swarm:main',
                 'visualizer_camera_network = px4_offboard.visualizer_camera_network:main',
         ],
     },
