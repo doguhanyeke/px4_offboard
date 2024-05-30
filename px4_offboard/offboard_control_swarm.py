@@ -158,7 +158,7 @@ class OffboardSwarmMission(Node):
         #offboard_msg.acceleration=False
         self.publisher_offboard_mode.publish(offboard_msg)
         self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_DO_SET_MODE, 1., 6.)
-        if self.nav_state != VehicleStatus.ARMING_STATE_ARMED and self.arm_counter < 10:
+        if self.nav_state != VehicleStatus.ARMING_STATE_ARMED and self.arm_counter < 50:
             self.arm_counter += 1
             self.publish_vehicle_command(VehicleCommand.VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0)
         
@@ -194,7 +194,7 @@ class OffboardSwarmMission(Node):
                 trajectory_msg.position[2]  = np.nan
                 trajectory_msg.velocity[0]  = self.ocra2_setpoint[3]
                 trajectory_msg.velocity[1]  = self.ocra2_setpoint[4]
-                trajectory_msg.velocity[2]  = 5*self.ocra2_setpoint[5]
+                trajectory_msg.velocity[2]  = 0#5*self.ocra2_setpoint[5]
                 #self.get_logger().info("Offboard" + str(self.ocra2_setpoint[3]) + str(self.ocra2_setpoint[4]))  
                 self.publisher_trajectory.publish(trajectory_msg)
             
